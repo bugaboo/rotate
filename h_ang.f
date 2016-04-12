@@ -32,7 +32,14 @@ C        IF (MOD(i, NR / 10 + 1) .EQ. 0) PRINT *, 'Progress:', DBLE(i)/NR
         DO j = 1, NANG
           V(j, j) = V(j,j) + DBLE(L(j)*(L(j)+1))/2.D0/R/R - OMEGA*M(j)
         ENDDO
-
+        if (i .eq. 1) then
+          do j = 1, nang
+            do k = 1, nang
+              write(*, '(g17.10,1x)',ADVANCE = 'NO') v(j, k)           
+              write(*,50)L(j), M(j),L(k), M(k)
+            enddo
+          enddo
+        endif
         CALL DSYEV ('N', 'U', NANG, V, NANG, E, WK, IW, INFO)
         IF (INFO .GT. 0) STOP 'INFO>0'
     
