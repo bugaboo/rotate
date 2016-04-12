@@ -29,9 +29,6 @@ C        IF (MOD(i, NR / 10 + 1) .EQ. 0) PRINT *, 'Progress:', DBLE(i)/NR
         V = 0.D0
         R = 0.5D0 + DBLE(i) * TNR
         CALL POTMAT(NTET,NPHI,R,V,NANG,L,M,LMAX,X0)
-        DO j = 1, NANG
-          V(j, j) = V(j,j) + DBLE(L(j)*(L(j)+1))/2.D0/R/R - OMEGA*M(j)
-        ENDDO
         if (i .eq. 1) then
           do j = 1, nang
             do k = 1, nang
@@ -40,6 +37,9 @@ C        IF (MOD(i, NR / 10 + 1) .EQ. 0) PRINT *, 'Progress:', DBLE(i)/NR
             enddo
           enddo
         endif
+        DO j = 1, NANG
+          V(j, j) = V(j,j) + DBLE(L(j)*(L(j)+1))/2.D0/R/R - OMEGA*M(j)
+        ENDDO
         CALL DSYEV ('N', 'U', NANG, V, NANG, E, WK, IW, INFO)
         IF (INFO .GT. 0) STOP 'INFO>0'
     
