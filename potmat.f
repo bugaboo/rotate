@@ -22,8 +22,8 @@ C
 !$OMP& X0, RAD)
 !$OMP DO
       DO i = 1,NANG
-        DO j = 1,NANG
-        CSUMP = (0.D0, 0.D0)
+        DO j = i,NANG
+        SUMP = 0.D0
         DO k = 1,NPHI
           PHI = DBLE(2*k-1)*PI/DBLE(NPHI)
           M1 = ABS(M(i))
@@ -50,6 +50,11 @@ C     & *DSIN(DACOS(X(n,M1+M2)))*CDEXP((0,-1.D0)*PHI)*dsqrt(0.375D0/PI)
       ENDDO
 !$OMP END DO
 !$OMP END PARALLEL
+      DO i = 1, NANG
+        DO j = 1, i - 1
+          V(i, j) = V(j, i)
+        ENDDO
+      ENDDO
       DEALLOCATE(X,W,XT,WT,T)
       RETURN
       END
