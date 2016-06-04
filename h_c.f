@@ -8,56 +8,55 @@
 
       CHARACTER(LEN = 30) :: EIGNAME
       LOGICAL :: CONS_INPUT
-      ALLOCATABLE :: L(:), M(:), V(:,:), E(:),Z(:),WI(:),WK(:)
+      ALLOCATABLE :: L(:), M(:), CV(:,:), E(:),CZ(:),CW(:),WK(:),IK(:)
       ALLOCATABLE :: IFAIL(:)
       X0 = 2.D0
-      NEIG = 3
+      NEIG = 100
       OMEGA = 1.D0
+C      EIGNAME = 'eigenvalues'
       
       IF (.NOT.CONSOLE_INPUT(RMAX, NR, LMAX, KSYM, NTET, NPHI, MODEL, X0
      &  ,OMEGA)) STOP 'Arguments stop'
-
-      CALL ANGBAS(KSYM, L, M, LMAX, NBAS) 
-      NEIG = MIN(NEIG, NBAS)
-
-      IW = (NBAS + 3) * NBAS
-      ALLOCATE (V(NBAS, NBAS), E(NBAS), WK(IW))
+      CALL ANGBAS(KSYM, L, M, LMAX, NANG) 
+      NEIG = MIN(NEIG, NANG)
+C      DO i = 1, NANG
+C        PRINT *, L(i), M(i), KSYM
+C      ENDDO
+      NW = NANG * NANG + 2
+      ALLOCATE (CV(NANG, NANG), E(NANG), CZ(NEIG), CW(NW), WK(NANG*7))
+      ALLOCATE (IK(5 * NANG), IFAIL(NANG))
+      write(*,*) EIGNAME(MODEL, KSYM, X0, LMAX, OMEGA), X0
       open(1, FILE=EIGNAME(MODEL, KSYM, X0, LMAX, OMEGA))
       TNR = RMAX / DBLE(NR)
       DO i = 1, NR
-C        IF (MOD(i, NR / 10 + 1) .EQ. 0) PRINT *, 'Progress:', DBLE(i)/NR
-        V = 0.D0
-        R = DBLE(i) * TNR
-        CALL POTMAT(NTET,NPHI,R,V,NBAS,L,M,LMAX,X0)
-        DO j = 1, NBAS
-          V(j, j) = V(j,j) + DBLE(L(j)*(L(j)+1))/2.D0/R/R - OMEGA*M(j)
+        IF (MOD(i, NR / 1) .EQ. 0) PRINT *, i
+        CV = 0.D0
+        R = 0.5D0 + DBLE(i) * TNR
+        CALL CPOTMAT(NTET,NPHI,R,CV,NANG,L,M,LMAX,X0)
+        if (i .eq. 1) then
+          do j = 1, nang
+            do k = 1, nang
+              write(*, '(g17.10,1x)', ADVANCE = 'NO') 
+     &            DREAL(cv(j, k))              
+              write(*,50)L(j), M(j), L(k), M(k)
+            enddo
+          enddo
+        endif
+        DO j = 1, NANG
+          CV(j, j) = CV(j,j) + DBLE(L(j)*(L(j)+1))/2.D0/R/R - OMEGA*M(j)
         ENDDO
-
-        CALL LAPEIGRS (0, NBAS, V, E, WK) 
-c        CALL DSYEV ('N', 'U', NBAS, V, NBAS, E, WK, IW, INFO)    
-
+        CALL ZHEEVX('N', 'I', 'U', NANG, CV, NANG, 0, 1, 1, NEIG, 0.D0,
+     &      NEIG, E, CZ, 1, CW, NW, WK, IK, IFAIL, INFO)
+        IF (INFO .GT. 0) STOP 'ZHEEVX INFO>0'
         WRITE(1, 77, ADVANCE = 'NO') R
         DO j = 1, NEIG - 1 
           WRITE(1,77, ADVANCE = 'NO') E(j)
         ENDDO
         WRITE(1, 77) E(NEIG)
-        WRITE(*, '(I0,1X,I0,1X)', ADVANCE = 'NO') NTET, NPHI
-        DO j = 1, NEIG - 1 
-          WRITE(*,77, ADVANCE = 'NO') E(j)
-        ENDDO
-        WRITE(*, 77) E(NEIG)
       ENDDO
-
-C      CALL ANGEVP(L,M,NBAS,LMAX,NTET,NPHI,X0,OMEGA,RMAX,E,V)
-      DO i = 1, NEIG
-C        PRINT *, E(i)
-      ENDDO
-      
-      DEALLOCATE(L, M, V, E, WK) 
-
+        
  77   FORMAT((E19.12,1X))
  50   FORMAT(I0,' ',I0,' ',I0,' ',I0)
-
 
       CONTAINS 
         FUNCTION CONSOLE_INPUT(RMAX, NR, LMAX, KSYM, NTET, NPHI, MODEL,
