@@ -21,11 +21,12 @@
       SAVE XX,WX,TX,DVRX,XSI,CEIGX,CVECX,XE,WE,PILE,PIRE,DVRE
 
       NAMELIST /INF_STARK/ITRMAX,EPS,NSEC,RMAX,NDVR,LMAX,NTET,NPHI
-      ALLOCATABLE L(:), M(:)
+      ALLOCATABLE :: L(:), M(:), PIL(:), PIR(:), VK(:)
       ALLOCATABLE :: RSEC(:), XR(:), WR(:), TR(:,:), DVRR(:)
       ALLOCATABLE :: ANGEIGVAL(:,:), ANGEIGVEC(:,:)
-      SAVE L, M, RSEC, XR, WR, TR, DVRR, ANGEIGVAL, ANGEIGVEC
-      
+      SAVE L, M, RSEC, XR, WR, TR, DVRR, ANGEIGVAL, ANGEIGVEC, PIL, PIR
+      SAVE RMAX, SR, WSEC
+
       CONTAINS
       SUBROUTINE STARKI(IWF0)
 C=======================================================================
@@ -77,12 +78,31 @@ C --- R
       ALLOCATE(XR(NDVR),WR(NDVR),TR(NT,NT),DVRR(NDVR*(NT)/2))
       CALL LEGPOM(NDVR)
       CALL DVRLEG(NDVR,XR,WR,TR,1,0,DVRR,NT)
-
+C --- Left (PIL) and right (PIR) end DVR basis amplitudes
+      ALLOCATE (PIL(NDVR), PIR(NDVR), VK(NDVR))
+      DO n=1,NDVR
+        TMP=DSQRT(n-0.5D0)
+        VK1(n)=TMP
+        VK2(n)=TMP
+      ENDDO
+      DO n=2,NDVR,2
+        VK1(n)=-VK1(n)
+      ENDDO
+      DO i=1,NDVR
+        PIL(i)=0.D0
+        PIR(i)=0.D0
+        DO n=1,NDVR
+          PIL(i)=PIL(i)+T(n,i)*VK1(n)
+          PIR(i)=PIR(i)+T(n,i)*VK2(n)
+        ENDDO
+      ENDDO
+      DEALLOCATE(VK)
 C
 C  All angular EVP
 C
 C --- Sectors info
       WSEC = RMAX / DBLE(NSEC)
+      SR = WSEC / 2.D0
       ALLOCATE(RSEC(0:NSEC))
       DO i = 0, NSEC
         RSEC(i) = i * WSEC
