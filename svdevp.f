@@ -2,12 +2,17 @@
       USE STARK
       IMPLICIT REAL*8 (A,B,D-H,O-Z)
       IMPLICIT COMPLEX*16 (C)
-      DIMENSION :: H(NSVD, *), RAD(NDVR), ANGEIG(NBAS, *), EIG(*)
-      ALLOCATABLE :: OVLP(:, :), DVRK(:), WK(:)
-
+      DIMENSION :: H(NSVD,NSVD), RAD(NDVR), ANGEIG(NBAS,NDVR), EIG(NSVD)
+      ALLOCATABLE :: OVLP(:, :), DVRK(:), WK(:,:), DVR0(:), DVR1(:),
+     &                DVR2(:), RHO(:), VK(:)
+      INTEGER INFO
 
 C --- Kinetic part
-      ALLOCATE(DVRK(NDVR * (NDVR + 1) / 2))
+      NDVRD = NDVR + 1
+      NDVRT = NDVR * NDVRD / 2 
+      ALLOCATE(DVRK(NDVRT), DVR0(NDVRT), DVR1(NDVRT), DVR2(NDVRT))
+      ALLOCATE(RHO(NDVRT), WK(NDVRD, NDVR))
+      CALL DVRSL(NDVR,XR,WR,TR,DVR0,DVR1,DVR2,RHO,PIL,PIR,WK,NDVRD)
       A0 = (RADL + RADR) ** 2 / (RADR - RADL) ** 2 / 2.D0
       A1 = (RADL + RADR) / (RADR - RADL)
       A2 = 0.5D0
@@ -22,14 +27,14 @@ C --- Kinetic part
           DO nu = 1, NBAS
             DO mu = 1, NBAS
               H(ii + nu, jj + mu) = H(ii + nu, jj + mu) * DVRK(ij)
-C Symmetric   if (i .NE. j) then
-C               H(jj + nu, ii + mu) = H(jj + nu, ii + mu) * DVRK(ij)
-C             endif
+C Symmetric H              
+C              if (i .NE. j) then
+C                H(jj + nu, ii + mu) = H(jj + nu, ii + mu) * DVRK(ij)
+C              endif
             ENDDO
 C --- Angular eigenvalues            
             IF (i .EQ. j) THEN
-              H(ii + nu, jj + nu) = H(ii + nu, jj + nu) + 
-     &          ANGEIG(i, nu)
+              H(ii + nu, jj + nu) = H(ii + nu, jj + nu) + ANGEIG(nu, i)
             ENDIF
           ENDDO
         ENDDO
@@ -37,11 +42,11 @@ C --- Angular eigenvalues
 
 C --- Diagonalization       
       SR = (RADR - RADL) / 2.D0
-      NWK = 20 * NSVD
-      ALLOCATE(WK(NWK))
+      NVK = 20 * NSVD
+      ALLOCATE(VK(NVK))
 C      CALL LAPEIGRS (0, NBAS, V, E, WK)
-      CALL DSYEV('V','U',NSVD,H,NSVD,EIG,WK,NWK,info)
-      IF(info.NE.0)  WRITE(*,*) "ANGEVP DSYEV ERROR",info
+      CALL DSYEV('V','U',NSVD,H,NSVD,EIG,VK,NVK,INFO)
+      IF(INFO.NE.0)  WRITE(*,*) "ANGEVP DSYEV ERROR",INFO
 C --- Normalization (unnecessary?)
       DO i = 1, NSVD
         TMP = 0.D0
@@ -59,6 +64,5 @@ C --- Conversion
           H(i, n) = H(i, n) / RAD(MOD(i, NBAS))
         ENDDO
       ENDDO
-
-      DEALLOCATE(WK, DVRK)
+      DEALLOCATE(DVR0, DVR1, DVR2)
       END SUBROUTINE

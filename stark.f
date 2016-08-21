@@ -3,29 +3,18 @@
       IMPLICIT REAL*8 (A,B,D-H,O-Z)
       IMPLICIT COMPLEX*16 (C)
 
-      DIMENSION AKT(*),CTMD(*)
-      ALLOCATABLE XX(:),WX(:),TX(:,:),DVRX(:),XSI(:),
-     &            CEIGX(:),CVECX(:,:),
-     &            XE(:,:),WE(:,:),PILE(:,:),PIRE(:,:),DVRE(:,:)
-      ALLOCATABLE CRMATL(:,:),CRMATR(:,:),CRAS(:),CVK(:),CWK(:,:)
-      ALLOCATABLE CXSIM(:,:),CDMAT(:,:),CNMAT(:,:),
-     &            CMAT1(:,:),CMAT2(:,:),CDPSI(:,:),CPSIAS(:),
-     &            CFAS(:),CVN(:),CWN(:,:),CVK1(:),CVK2(:)
-      NAMELIST /INF_STARK_OLD/KPOT,MZ,NCH,NDVRX,ES,NDVRE,ETAS,NSEC,MSEC,
-     &                    KROT,FAC1ST,FACMAX,ITRMAX,EPS
-      COMMON /PI_C/PI
-      COMMON /POT_STARK/KPOT /DIM_STARK/NDVRX,NDVRE,NDVRSE,NCH,NSVD
-     &       /ES_STARK/ES,SCALE /EFM_STARK/CE,CF,AMM,CALF
-     &       /COF_STARK/COF(4) /KEY_STARK/KRUN,KWF
-      SAVE MZ,AMZ,ETAS,ETAC,NSEC,MSEC,KROT,FAC1ST,FACMAX,ITRMAX,EPS,IWF
-      SAVE XX,WX,TX,DVRX,XSI,CEIGX,CVECX,XE,WE,PILE,PIRE,DVRE
-
-      NAMELIST /INF_STARK/ITRMAX,EPS,NSEC,RMAX,NDVR,LMAX,NTET,NPHI
-      ALLOCATABLE :: L(:), M(:), PIL(:), PIR(:), VK(:)
+      NAMELIST /INF_STARK/ITRMAX,EPS,NSEC,MSEC,KSYM,MODEL,RMAX,NDVR,LMAX
+     &          ,NTET,NPHI 
+      ALLOCATABLE :: L(:), M(:), PIL(:), PIR(:), VK1(:), VK2(:)
       ALLOCATABLE :: RSEC(:), XR(:), WR(:), TR(:,:), DVRR(:)
-      ALLOCATABLE :: ANGEIGVAL(:,:), ANGEIGVEC(:,:)
-      SAVE L, M, RSEC, XR, WR, TR, DVRR, ANGEIGVAL, ANGEIGVEC, PIL, PIR
-      SAVE RMAX, SR, WSEC
+      ALLOCATABLE :: ANGEIGVAL(:,:), ANGEIGVEC(:,:), FSVD1(:,:,:),
+     &               FSVD2(:,:,:)
+      INTEGER :: NSVD, NDVR, NBAS
+      COMMON /POT_C/MODEL
+C      SAVE L, M, RSEC, XR, WR, TR, DVRR, ANGEIGVAL, ANGEIGVEC, PIL, PIR
+C      SAVE RMAX, SR, WSEC, FSVD1, FSVD2
+C      SAVE NDVR, NBAS, NSVD
+      SAVE
 
       CONTAINS
       SUBROUTINE STARKI(IWF0)
@@ -61,14 +50,6 @@ C
       READ(1,INF_STARK)
       CLOSE(1)
 
-      AMZ=DBLE(MZ)
-      AMM=0.5D0*AMZ*AMZ
-      COF(1)=0.25D0*(1.D0-AMZ*AMZ)
-      ETAC=DBLE(NSEC)*ETAS
-      NDVRSX=(NDVRX*(NDVRX+1))/2
-      NDVRSE=(NDVRE*(NDVRE+1))/2
-      NSVD=NCH*NDVRE
-
 
 C
 C  DVR arrays
@@ -79,7 +60,7 @@ C --- R
       CALL LEGPOM(NDVR)
       CALL DVRLEG(NDVR,XR,WR,TR,1,0,DVRR,NT)
 C --- Left (PIL) and right (PIR) end DVR basis amplitudes
-      ALLOCATE (PIL(NDVR), PIR(NDVR), VK(NDVR))
+      ALLOCATE (PIL(NDVR), PIR(NDVR), VK1(NDVR), VK2(NDVR))
       DO n=1,NDVR
         TMP=DSQRT(n-0.5D0)
         VK1(n)=TMP
@@ -92,11 +73,11 @@ C --- Left (PIL) and right (PIR) end DVR basis amplitudes
         PIL(i)=0.D0
         PIR(i)=0.D0
         DO n=1,NDVR
-          PIL(i)=PIL(i)+T(n,i)*VK1(n)
-          PIR(i)=PIR(i)+T(n,i)*VK2(n)
+          PIL(i)=PIL(i)+TR(n,i)*VK1(n)
+          PIR(i)=PIR(i)+TR(n,i)*VK2(n)
         ENDDO
       ENDDO
-      DEALLOCATE(VK)
+      DEALLOCATE(VK1, VK2)
 C
 C  All angular EVP
 C
@@ -109,21 +90,16 @@ C --- Sectors info
       ENDDO
 C --- Angular basis
       CALL ANGBAS(KSYM, L, M, LMAX, NBAS) 
-C --- ANGEVPs
-      ALLOCATE(ANGEIGVAL(NSEC,NBAS), ANGEIGVEC(NSEC,NBAS))
+      NSVD = NBAS * NDVR
+      ALLOCATE (FSVD1(NBAS, NSVD, NSEC), FSVD2(NBAS, NSVD, NSEC))
+      
+      RETURN
+      END SUBROUTINE
+
+      SUBROUTINE STARKEF()
+
       DO i = 1, NSEC
-        DO j = 1, NDVR
-          RAD = RSEC(i) - (NDVR - j) * WSEC / DBLE(NDVR) 
-          CALL ANGEVP(L,M,NBAS,LMAX,NTET,NPHI,X0,OMEGA,RAD,
-     &              ANGEIGVAL(i),ANGEIGVEC(i))
-        ENDDO
+        CALL SECTOR(i)
       ENDDO
-C --- XSI
-      ALLOCATE(XX(NDVRX),WX(NDVRX),TX(NDVRX+1,NDVRX+1),DVRX(NDVRSX),
-     &         XSI(NDVRX),CEIGX(NCH),CVECX(NDVRX,NCH))
-      CALL LAGPOM(AMZ,NDVRX)
-      CALL DVRLAG(AMZ,NDVRX,XX,WX,TX,1,DVRX,NDVRX+1)
-      SCALE=1.D0/DSQRT(-2.D0*ES)
-      DO i=1,NDVRX
-        XSI(i)=SCALE*XX(i)
-      ENDDO
+      END SUBROUTINE
+      END MODULE

@@ -1,4 +1,5 @@
       FUNCTION POT3D(RAD,TET,PHI,X0)
+
 C=======================================================================
 C  Potential energy V(r) for one-channel SPS EVP in the R problem
 C-----------------------------------------------------------------------
