@@ -1,10 +1,11 @@
       FUNCTION POT3D(RAD,TET,PHI,X0)
+      USE STARK
 
 C=======================================================================
 C  Potential energy V(r) for one-channel SPS EVP in the R problem
 C-----------------------------------------------------------------------
       IMPLICIT REAL*8 (A-H,O-Z)
-      COMMON /POT_C/MODEL
+C      COMMON /POT_C/MODEL
 C
       R = DSQRT(RAD*RAD + 2*RAD*X0*DSIN(TET)*DCOS(PHI) + X0*X0)      
       SELECT CASE(MODEL)

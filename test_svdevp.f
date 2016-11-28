@@ -21,7 +21,7 @@
           ENDDO
         ENDDO
       ENDDO
-      PRINT *, MODEL, NDVR
+      PRINT *, MODEL, NDVR, NBAS
       DO i = 1, NDVR
         DO nu = 1, NBAS
           EANG(nu, i) = L(nu) * (L(nu) + 1) / 2.D0 / RAD(i)**2 - OMEGA 

@@ -1,0 +1,22 @@
+Index of variables:
+CFSVD1    initial F matrix to be used in R-matrix propagation. 
+CFSVD2    final F matrix to be used in R-matrix propagation(1 corresponds to -(left) if we  
+          propagate in direction of increasing radius and vice versa) (NIFS (109))
+DVR0      Kinetic matrix for zeroth power of r
+DVR1      Kinetic matrix for first power of r
+DVR2      Kinetic matrix for second power of r (NIFS (B53))
+
+KSYM      key value for symmetries in constructing angular basis.
+L         array of size NBAS, contains values of angular momentum participating in basis.
+M         array of size NBAS, contains values of z component of angular momentum
+MODEL     key for different potentials.
+NBAS      size of angular basis.
+NDVR      size of DVR basis in radial dimension.
+NDVRD     NDVR + 1
+NDVRT     size of symmatric matrix array in compact form, equals to NDVR*NDVRD/2           
+NSVD      total size of SVD basis, equals NDVR*NBAS.
+PIL       left end DVR basis amplitudes (NIFS (B12)).
+PIR       right end DVR basis amplitudes (NIFS (B12)).
+RHO       weight matrix corresponding to r^2 in DVR basis. Irrelevant.
+XR        x-values of Legendre quadrature, array of size NDVR.
+WR        weights of Legendre quadrature of size NDVR.

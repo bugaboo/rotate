@@ -1,18 +1,33 @@
       SUBROUTINE SVDEVP(RADL, RADR, RAD, H, EIG, ANGEIG)
+*   Purpose
+C =================
+C 
+C   Calculates eigenvalues and eigenvectors of SVD eigenvalue 
+C   problem in the sector between RADL and RADR.
+C
+* Arguments
+C ================
+C   
+C RADL    (input) left end of the sector
+C RADR    (input) right end of the sector. RADR >= RADL
+C RAD     (input) array, dimension (NDVR)
+C H       (input/output) array, dimension (NSVD, NSVD). On entry has
+C          to be the correct overlap matrix, on exit contains converted 
+C          normalized eigenvectors of SVD problem.
+C EIG     (output) array, dimension(NSVD). On exit contains eigenvalues
+C          of SVD problem.
+C ANGEIG  (input) array, dimension(NBAS). Eigenvalues of angular part.
+C======================================================================
       USE STARK
       IMPLICIT REAL*8 (A,B,D-H,O-Z)
       IMPLICIT COMPLEX*16 (C)
       DIMENSION :: H(NSVD,NSVD), RAD(NDVR), ANGEIG(NBAS,NDVR), EIG(NSVD)
-      ALLOCATABLE :: OVLP(:, :), DVRK(:), WK(:,:), DVR0(:), DVR1(:),
-     &                DVR2(:), RHO(:), VK(:)
-      INTEGER INFO
+
+      ALLOCATABLE :: OVLP(:, :), DVRK(:), VK(:)
+      INTEGER :: INFO
 
 C --- Kinetic part
-      NDVRD = NDVR + 1
-      NDVRT = NDVR * NDVRD / 2 
-      ALLOCATE(DVRK(NDVRT), DVR0(NDVRT), DVR1(NDVRT), DVR2(NDVRT))
-      ALLOCATE(RHO(NDVRT), WK(NDVRD, NDVR))
-      CALL DVRSL(NDVR,XR,WR,TR,DVR0,DVR1,DVR2,RHO,PIL,PIR,WK,NDVRD)
+      ALLOCATE(DVRK(NDVRT))
       A0 = (RADL + RADR) ** 2 / (RADR - RADL) ** 2 / 2.D0
       A1 = (RADL + RADR) / (RADR - RADL)
       A2 = 0.5D0
@@ -39,6 +54,7 @@ C --- Angular eigenvalues
           ENDDO
         ENDDO
       ENDDO
+      DEALLOCATE(DVRK)
 
 C --- Diagonalization       
       SR = (RADR - RADL) / 2.D0
@@ -46,23 +62,22 @@ C --- Diagonalization
       ALLOCATE(VK(NVK))
 C      CALL LAPEIGRS (0, NBAS, V, E, WK)
       CALL DSYEV('V','U',NSVD,H,NSVD,EIG,VK,NVK,INFO)
-      IF(INFO.NE.0)  WRITE(*,*) "ANGEVP DSYEV ERROR",INFO
+      IF(INFO.NE.0)  WRITE(*,*) "SVDEVP DSYEV ERROR",INFO
 C --- Normalization (unnecessary?)
-      DO i = 1, NSVD
-        TMP = 0.D0
-        DO j = 1, NSVD
-          TMP = TMP + H(i, j) ** 2
-        ENDDO
-        TMP = DSQRT(SR * TMP)
-        DO j = 1, NSVD
-          H(i, j) = H(i, j) / TMP
-        ENDDO
-      ENDDO
+C      DO i = 1, NSVD
+C        TMP = 0.D0
+C        DO j = 1, NSVD
+C          TMP = TMP + H(i, j) ** 2
+C        ENDDO
+C        TMP = DSQRT(SR * TMP)
+C        DO j = 1, NSVD
+C          H(i, j) = H(i, j) / TMP
+C        ENDDO
+C      ENDDO
 C --- Conversion
       DO n = 1, NSVD
         DO i = 1, NSVD
           H(i, n) = H(i, n) / RAD(MOD(i, NBAS))
         ENDDO
       ENDDO
-      DEALLOCATE(DVR0, DVR1, DVR2)
       END SUBROUTINE

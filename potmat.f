@@ -17,7 +17,6 @@ C
           W(j,i) = WT(j)
         ENDDO
       ENDDO
-    
 !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(NANG,NPHI,NTET,L,M,V,X,W,PI,
 !$OMP& X0, RAD)
 !$OMP DO

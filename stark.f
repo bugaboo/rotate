@@ -5,11 +5,13 @@
 
       NAMELIST /INF_STARK/ITRMAX,EPS,NSEC,MSEC,KSYM,MODEL,RMAX,NDVR,LMAX
      &          ,NTET,NPHI 
+      ALLOCATABLE :: DVR0(:), DVR1(:), DVR2(:)
       ALLOCATABLE :: L(:), M(:), PIL(:), PIR(:), VK1(:), VK2(:)
       ALLOCATABLE :: RSEC(:), XR(:), WR(:), TR(:,:), DVRR(:)
-      ALLOCATABLE :: ANGEIGVAL(:,:), ANGEIGVEC(:,:), FSVD1(:,:,:),
-     &               FSVD2(:,:,:)
-      INTEGER :: NSVD, NDVR, NBAS
+      ALLOCATABLE :: ANGEIGVAL(:,:), ANGEIGVEC(:,:)
+      ALLOCATABLE :: CFSVD1(:,:,:), CFSVD2(:,:,:)
+      INTEGER :: NSVD, NDVR, NBAS, NDVRD, NDVRT
+      REAL*8 :: SR, WSEC
       COMMON /POT_C/MODEL
 C      SAVE L, M, RSEC, XR, WR, TR, DVRR, ANGEIGVAL, ANGEIGVEC, PIL, PIR
 C      SAVE RMAX, SR, WSEC, FSVD1, FSVD2
@@ -43,6 +45,7 @@ C  Externally defined common block /PI_C/PI is needed.
 C  Temporary channels 11 and 12 are reserved.
 C-----------------------------------------------------------------------
       USE ANGSYM
+      ALLOCATABLE :: RHO(:), WK(:,:)
 C
 C  Input information
 C
@@ -50,12 +53,13 @@ C
       READ(1,INF_STARK)
       CLOSE(1)
 
-
 C
 C  DVR arrays
 C
 C --- R
       NT = NDVR + 1
+      NDVRD = NT
+      NDVRT = NDVR * NDVRD / 2
       ALLOCATE(XR(NDVR),WR(NDVR),TR(NT,NT),DVRR(NDVR*(NT)/2))
       CALL LEGPOM(NDVR)
       CALL DVRLEG(NDVR,XR,WR,TR,1,0,DVRR,NT)
@@ -78,6 +82,12 @@ C --- Left (PIL) and right (PIR) end DVR basis amplitudes
         ENDDO
       ENDDO
       DEALLOCATE(VK1, VK2)
+
+C --- Constant kinetic matrices DVR0-DVR2
+      ALLOCATE(DVR0(NDVRT), DVR1(NDVRT), DVR2(NDVRT))
+      ALLOCATE(RHO(NDVRT), WK(NDVRD, NDVR))
+      CALL DVRSL(NDVR,XR,WR,TR,DVR0,DVR1,DVR2,RHO,PIL,PIR,WK,NDVRD)
+      DEALLOCATE(RHO, WK)
 C
 C  All angular EVP
 C
@@ -91,7 +101,7 @@ C --- Sectors info
 C --- Angular basis
       CALL ANGBAS(KSYM, L, M, LMAX, NBAS) 
       NSVD = NBAS * NDVR
-      ALLOCATE (FSVD1(NBAS, NSVD, NSEC), FSVD2(NBAS, NSVD, NSEC))
+      ALLOCATE (CFSVD1(NSVD, NBAS, NSEC), CFSVD2(NSVD, NBAS, NSEC))
       
       RETURN
       END SUBROUTINE
@@ -102,4 +112,10 @@ C --- Angular basis
         CALL SECTOR(i)
       ENDDO
       END SUBROUTINE
+
+      SUBROUTINE STARKQUIT()
+        DEALLOCATE (DVR0, DVR1, DVR2, XR, WR, L, M, CFSVD1, CFSVD2)
+        DEALLOCATE (VK1, VK2, TR, DVRR, PIL, PIR)
+      END SUBROUTINE
+
       END MODULE

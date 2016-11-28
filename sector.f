@@ -4,8 +4,9 @@
       IMPLICIT REAL*8 (A,B,D-H,O-Z)
       IMPLICIT COMPLEX*16 (C)
 
-      ALLOCATABLE :: RAD(:), OVLP(:,:), ESVD(:), EIGANGL(:), EIGANGR(:)
-      ALLOCATABLE :: EIGANG(:,:), VECANG(:,:,:), VECANGL(:), VECANGR(:)
+      ALLOCATABLE :: RAD(:),OVLP(:,:),ESVD(:),EIGANGL(:),EIGANGR(:)
+      ALLOCATABLE :: EIGANG(:,:), VECANG(:,:,:), VECANGL(:,:)
+      ALLOCATABLE :: VECANGR(:,:)
   
       RADL = WSEC * (ISEC - 1)
       RADR = WSEC * ISEC
@@ -62,11 +63,11 @@ C --- Surface amplitudes of R-matrix eigenfunctions. Boundary overlap
           TMP1 = TMP1 * RADL
           TMP2 = TMP2 * RADR
           IF (ISEC .LE. MSEC) THEN 
-            FSVD1(nu, n, ISEC) = TMP1
-            FSVD2(nu, n, ISEC) = TMP2
+            CFSVD1(n, nu, ISEC) = DCMPLX(TMP1)
+            CFSVD2(n, nu, ISEC) = DCMPLX(TMP2)
           ELSE
-            FSVD1(nu, n, ISEC) = TMP2
-            FSVD2(nu, n, ISEC) = TMP1
+            CFSVD1(n, nu, ISEC) = DCMPLX(TMP2)
+            CFSVD2(n, nu, ISEC) = DCMPLX(TMP1)
           ENDIF
         ENDDO
       ENDDO
