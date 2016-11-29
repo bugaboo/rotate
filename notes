@@ -10,6 +10,8 @@ KSYM      key value for symmetries in constructing angular basis.
 L         array of size NBAS, contains values of angular momentum participating in basis.
 M         array of size NBAS, contains values of z component of angular momentum
 MODEL     key for different potentials.
+MSEC      sector in which backward and forward R-matrix propagation meet. Matching is 
+          done on the right boundary of this sector.
 NBAS      size of angular basis.
 NDVR      size of DVR basis in radial dimension.
 NDVRD     NDVR + 1
@@ -18,5 +20,6 @@ NSVD      total size of SVD basis, equals NDVR*NBAS.
 PIL       left end DVR basis amplitudes (NIFS (B12)).
 PIR       right end DVR basis amplitudes (NIFS (B12)).
 RHO       weight matrix corresponding to r^2 in DVR basis. Irrelevant.
+RSEC      right boundary of sector. Array of dimension(NSEC+1), RSEC(0) = 0.D0. 
 XR        x-values of Legendre quadrature, array of size NDVR.
 WR        weights of Legendre quadrature of size NDVR.
