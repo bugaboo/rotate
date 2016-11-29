@@ -1,27 +1,29 @@
-      SUBROUTINE RPROP(ETA1,ETA2,CESVD,CFSVD1,CFSVD2,CRMAT,CDMAT)
+      SUBROUTINE RPROP(SDIR, ISEC, CE, CRMAT, CDMAT)
       USE STARK
 C=======================================================================
-C  Propagating R(ETA) from ETA1 to ETA2 and constructing D(ETA2,ETA1)
+C  Propagating R(ETA) from RAD1 to RAD2 and constructing D(RAD2,RAD1)
 C-----------------------------------------------------------------------
       IMPLICIT REAL*8 (A,B,D-H,O-Z)
       IMPLICIT COMPLEX*16 (C)
-      DIMENSION CESVD(*),CFSVD1(NSVD,*),CFSVD2(NSVD,*),
-     &          CRMAT(NBAS,*),CDMAT(NBAS,*)
-      ALLOCATABLE CR11(:,:),CR22(:,:),CR12(:,:)
-      COMMON /DIM_STARK/NDVRX,NDVRE,NDVRSE,NBAS,NSVD /KEY_STARK/KRUN
+      DIMENSION CRMAT(NBAS,*),CDMAT(NBAS,*)
+      ALLOCATABLE CR11(:,:),CR22(:,:),CR12(:,:), CER(:)
 C  Used variables:
 C  NBAS, NSVD, EIGSVD,      
 C
 C  Matrices R11, R22, and R12
 C
       ALLOCATE(CR11(NBAS,NBAS),CR22(NBAS,NBAS),CR12(NBAS,NBAS))
+      ALLOCATE(CER(NSVD))
+      DO i = 1, NSVD
+        CER(i) = 0.5D0 / (DCMPLX(ESVD(i, ISEC), 0.D0) - CE)
+      ENDDO
       DO mu=1,NBAS
         DO nu=1,mu
           CTMP1=0.D0
           CTMP2=0.D0
           DO n=1,NSVD
-            CTMP1=CTMP1+CESVD(n)*CFSVD1(n,nu)*CFSVD1(n,mu)
-            CTMP2=CTMP2+CESVD(n)*CFSVD2(n,nu)*CFSVD2(n,mu)
+            CTMP1=CTMP1+CER(n)*CFSVD1(n,nu,ISEC)*CFSVD1(n,mu,ISEC)
+            CTMP2=CTMP2+CER(n)*CFSVD2(n,nu,ISEC)*CFSVD2(n,mu,ISEC)
           ENDDO
           CR11(nu,mu)=CTMP1
           CR22(nu,mu)=CTMP2
@@ -29,7 +31,7 @@ C
         DO nu=1,NBAS
           CTMP=0.D0
           DO n=1,NSVD
-            CTMP=CTMP+CESVD(n)*CFSVD1(n,nu)*CFSVD2(n,mu)
+            CTMP=CTMP+CER(n)*CFSVD1(n,nu,ISEC)*CFSVD2(n,mu,ISEC)
           ENDDO
           CR12(nu,mu)=CTMP
         ENDDO
@@ -41,9 +43,9 @@ C
         ENDDO
       ENDDO
 C
-C  Propagation R(ETA1)->R(ETA2)
+C  Propagation R(RAD1)->R(RAD2)
 C
-      IF(ETA1.EQ.0.D0) THEN
+      IF(ISEC.EQ.1) THEN
         DO mu=1,NBAS
           DO nu=1,NBAS
             CRMAT(nu,mu)=CR22(nu,mu)
@@ -51,8 +53,8 @@ C
         ENDDO
         GOTO 10
       ENDIF
-C --- Matrix A=R(ETA1)+SDIR*R11 to be inverted
-      SDIR=DSIGN(1.D0,ETA2-ETA1)
+C --- Matrix A=R(RAD1)+SDIR*R11 to be inverted
+      SDIR = DSIGN(1.D0, SDIR)
       DO mu=1,NBAS
         DO nu=1,NBAS
           CRMAT(nu,mu)=CRMAT(nu,mu)+SDIR*CR11(nu,mu)
@@ -60,7 +62,7 @@ C --- Matrix A=R(ETA1)+SDIR*R11 to be inverted
       ENDDO
 C --- Inversion of A and calculation of B=A*R12
       CALL LAPEQNCG(NBAS,CRMAT,NBAS,CR12,CR11)
-C --- Calculation of R(ETA2)=SDIR*R22-R21*B
+C --- Calculation of R(RAD2)=SDIR*R22-R21*B
       DO mu=1,NBAS
         DO nu=1,mu
           CTMP=0.D0
@@ -77,9 +79,9 @@ C --- Calculation of R(ETA2)=SDIR*R22-R21*B
       ENDDO
       IF(KRUN.EQ.1) GOTO 10
 C
-C  Matrix D(ETA2,ETA1)
+C  Matrix D(RAD2,RAD1)
 C
-      TMP=-SDIR*DSQRT(ETA1/ETA2)
+      TMP=-SDIR*DSQRT(RAD1/RAD2)
       DO mu=1,NBAS
         DO nu=1,NBAS
           CR11(nu,mu)=CRMAT(nu,mu)-SDIR*CR22(nu,mu)
@@ -88,7 +90,7 @@ C
       ENDDO
       CALL LAPEQNCG(NBAS,CR11,NBAS,CR22,CDMAT)
 C
- 10   DEALLOCATE(CR11,CR22,CR12)
+ 10   DEALLOCATE(CR11,CR22,CR12,CER)
       RETURN
       END
 C=======================================================================

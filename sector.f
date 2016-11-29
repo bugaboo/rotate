@@ -4,12 +4,12 @@
       IMPLICIT REAL*8 (A,B,D-H,O-Z)
       IMPLICIT COMPLEX*16 (C)
 
-      ALLOCATABLE :: RAD(:),OVLP(:,:),ESVD(:),EIGANGL(:),EIGANGR(:)
+      ALLOCATABLE :: RAD(:), OVLP(:,:), EIGANGL(:), EIGANGR(:)
       ALLOCATABLE :: EIGANG(:,:), VECANG(:,:,:), VECANGL(:,:)
       ALLOCATABLE :: VECANGR(:,:)
   
-      RADL = WSEC * (ISEC - 1)
-      RADR = WSEC * ISEC
+      RADL = RSEC(ISEC - 1)
+      RADR = RSEC(ISEC)
 
       ALLOCATE(RAD(NDVR))
       DO i = 1, NDVR
@@ -39,11 +39,11 @@ C --- Overlap matrix
         ENDDO
       ENDDO
 C --- SVDEVP      
-      ALLOCATE(ESVD(NSVD))
-      CALL SVDEVP(RADL, RADR, RAD, OVLP, ESVD, EIGANG)
+      CALL SVDEVP(RADL, RADR, RAD, OVLP, ESVD(:, ISEC), EIGANG)
+
       ALLOCATE (EIGANGL(NBAS),VECANGL(NBAS,NBAS))
-      ALLOCATE (EIGANGR(NBAS),VECANGR(NBAS,NBAS))
       CALL ANGEVP(L,M,NBAS,LMAX,NTET,NPHI,X0,OMEGA,RADL,EIGANGL,VECANGL)
+      ALLOCATE (EIGANGR(NBAS),VECANGR(NBAS,NBAS))
       CALL ANGEVP(L,M,NBAS,LMAX,NTET,NPHI,X0,OMEGA,RADR,EIGANGR,VECANGR)
 C --- Surface amplitudes of R-matrix eigenfunctions. Boundary overlap      
       DO n = 1, NSVD
@@ -73,5 +73,5 @@ C --- Surface amplitudes of R-matrix eigenfunctions. Boundary overlap
       ENDDO
 
           
-      DEALLOCATE (OVLP, RAD, EIGANG, VECANG, ESVD)
+      DEALLOCATE (OVLP, RAD, EIGANG, VECANG)
       END SUBROUTINE

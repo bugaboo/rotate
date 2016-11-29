@@ -7,13 +7,12 @@
      &          ,NTET,NPHI 
       ALLOCATABLE :: DVR0(:), DVR1(:), DVR2(:)
       ALLOCATABLE :: L(:), M(:), PIL(:), PIR(:), VK1(:), VK2(:)
-      ALLOCATABLE :: RSEC(:), XR(:), WR(:), TR(:,:), DVRR(:)
-      ALLOCATABLE :: ANGEIGVAL(:,:), ANGEIGVEC(:,:)
-      ALLOCATABLE :: CFSVD1(:,:,:), CFSVD2(:,:,:)
+      ALLOCATABLE :: RSEC(:), XR(:), WR(:), TR(:,:) 
+      ALLOCATABLE :: CFSVD1(:,:,:), CFSVD2(:,:,:), ESVD(:,:)
       INTEGER :: NSVD, NDVR, NBAS, NDVRD, NDVRT
       REAL*8 :: SR, WSEC
       COMMON /POT_C/MODEL
-C      SAVE L, M, RSEC, XR, WR, TR, DVRR, ANGEIGVAL, ANGEIGVEC, PIL, PIR
+C      SAVE L, M, RSEC, XR, WR, TR, PIL, PIR
 C      SAVE RMAX, SR, WSEC, FSVD1, FSVD2
 C      SAVE NDVR, NBAS, NSVD
       SAVE
@@ -45,7 +44,7 @@ C  Externally defined common block /PI_C/PI is needed.
 C  Temporary channels 11 and 12 are reserved.
 C-----------------------------------------------------------------------
       USE ANGSYM
-      ALLOCATABLE :: RHO(:), WK(:,:)
+      ALLOCATABLE :: RHO(:), WK(:,:), DVRR(:)
 C
 C  Input information
 C
@@ -62,7 +61,8 @@ C --- R
       NDVRT = NDVR * NDVRD / 2
       ALLOCATE(XR(NDVR),WR(NDVR),TR(NT,NT),DVRR(NDVR*(NT)/2))
       CALL LEGPOM(NDVR)
-      CALL DVRLEG(NDVR,XR,WR,TR,1,0,DVRR,NT)
+      CALL DVRLEG(NDVR,XR,WR,TR,0,0,DVRR,NT)
+      DEALLOCATE(DVRR)
 C --- Left (PIL) and right (PIR) end DVR basis amplitudes
       ALLOCATE (PIL(NDVR), PIR(NDVR), VK1(NDVR), VK2(NDVR))
       DO n=1,NDVR
@@ -102,20 +102,33 @@ C --- Angular basis
       CALL ANGBAS(KSYM, L, M, LMAX, NBAS) 
       NSVD = NBAS * NDVR
       ALLOCATE (CFSVD1(NSVD, NBAS, NSEC), CFSVD2(NSVD, NBAS, NSEC))
-      
+      ALLOCATE (ESVD(NSVD, NSEC))
       RETURN
+
+      KRUN = 1
       END SUBROUTINE
 
-      SUBROUTINE STARKEF()
-
+      SUBROUTINE STARKF()
+C --- Recalculates ESVD and CFSVD arrays.
       DO i = 1, NSEC
         CALL SECTOR(i)
       ENDDO
       END SUBROUTINE
 
+      SUBROUTINE STARKDET(CE, CDET)
+C --- Finds Det[R_l(MSEC) - R_r(MSEC)]
+      ALLOCATABLE :: CRMATL(:, :), CRMATR(:, :), CDMAT(:, :)
+
+      ALLOCATE(CRMATL(NBAS, NBAS), CRMATR(NBAS, NBAS), CDMAT(NBAS,NBAS))
+      CRMATL = 0.D0
+      DO i = 1, MSEC
+        CALL RPROP(1.D0, i, CE, CRMATL, CDMAT)
+      ENDDO
+      END SUBROUTINE
+
       SUBROUTINE STARKQUIT()
-        DEALLOCATE (DVR0, DVR1, DVR2, XR, WR, L, M, CFSVD1, CFSVD2)
-        DEALLOCATE (VK1, VK2, TR, DVRR, PIL, PIR)
+      DEALLOCATE (DVR0, DVR1, DVR2, XR, WR, L, M, CFSVD1, CFSVD2, ESVD)
+      DEALLOCATE (VK1, VK2, TR, PIL, PIR)
       END SUBROUTINE
 
       END MODULE
